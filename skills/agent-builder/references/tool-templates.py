@@ -6,113 +6,120 @@ Each tool needs:
 2. Implementation (Python function)
 """
 
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Standard Modules
+#
 from pathlib import Path
 import subprocess
 
 WORKDIR = Path.cwd()
 
 
-# =============================================================================
-# TOOL DEFINITIONS (for TOOLS list)
-# =============================================================================
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Tool Definitions (For Tools List)
+#
 
 BASH_TOOL = {
-    "name": "bash",
-    "description": "Run a shell command. Use for: ls, find, grep, git, npm, python, etc.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "command": {
-                "type": "string",
-                "description": "The shell command to execute"
-            }
+    "name"         : "bash",
+    "description"  : "Run a shell command. Use for: ls, find, grep, git, npm, python, etc.",
+    "input_schema" : {
+        "type"       : "object",
+        "properties" : {
+            "command" : {
+                "type"        : "string",
+                "description" : "The shell command to execute",
+            },
         },
-        "required": ["command"],
+        "required"   : ["command"],
     },
 }
 
 READ_FILE_TOOL = {
-    "name": "read_file",
-    "description": "Read file contents. Returns UTF-8 text.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "Relative path to the file"
+    "name"         : "read_file",
+    "description"  : "Read file contents. Returns UTF-8 text.",
+    "input_schema" : {
+        "type"       : "object",
+        "properties" : {
+            "path"  : {
+                "type"        : "string",
+                "description" : "Relative path to the file",
             },
-            "limit": {
-                "type": "integer",
-                "description": "Max lines to read (default: all)"
+            "limit" : {
+                "type"        : "integer",
+                "description" : "Max lines to read (default: all)",
             },
         },
-        "required": ["path"],
+        "required"   : ["path"],
     },
 }
 
 WRITE_FILE_TOOL = {
-    "name": "write_file",
-    "description": "Write content to a file. Creates parent directories if needed.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "Relative path for the file"
+    "name"         : "write_file",
+    "description"  : "Write content to a file. Creates parent directories if needed.",
+    "input_schema" : {
+        "type"       : "object",
+        "properties" : {
+            "path"    : {
+                "type"        : "string",
+                "description" : "Relative path for the file",
             },
-            "content": {
-                "type": "string",
-                "description": "Content to write"
+            "content" : {
+                "type"        : "string",
+                "description" : "Content to write",
             },
         },
-        "required": ["path", "content"],
+        "required"   : ["path", "content"],
     },
 }
 
 EDIT_FILE_TOOL = {
-    "name": "edit_file",
-    "description": "Replace exact text in a file. Use for surgical edits.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "Relative path to the file"
+    "name"         : "edit_file",
+    "description"  : "Replace exact text in a file. Use for surgical edits.",
+    "input_schema" : {
+        "type"       : "object",
+        "properties" : {
+            "path"     : {
+                "type"        : "string",
+                "description" : "Relative path to the file",
             },
-            "old_text": {
-                "type": "string",
-                "description": "Exact text to find (must match precisely)"
+            "old_text" : {
+                "type"        : "string",
+                "description" : "Exact text to find (must match precisely)",
             },
-            "new_text": {
-                "type": "string",
-                "description": "Replacement text"
+            "new_text" : {
+                "type"        : "string",
+                "description" : "Replacement text",
             },
         },
-        "required": ["path", "old_text", "new_text"],
+        "required"   : ["path", "old_text", "new_text"],
     },
 }
 
 TODO_WRITE_TOOL = {
-    "name": "TodoWrite",
-    "description": "Update the task list. Use to plan and track progress.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "items": {
-                "type": "array",
-                "description": "Complete list of tasks",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "content": {"type": "string", "description": "Task description"},
-                        "status": {"type": "string", "enum": ["pending", "in_progress", "completed"]},
-                        "activeForm": {"type": "string", "description": "Present tense, e.g. 'Reading files'"},
+    "name"         : "TodoWrite",
+    "description"  : "Update the task list. Use to plan and track progress.",
+    "input_schema" : {
+        "type"       : "object",
+        "properties" : {
+            "items" : {
+                "type"        : "array",
+                "description" : "Complete list of tasks",
+                "items"       : {
+                    "type"       : "object",
+                    "properties" : {
+                        "content"    : {"type": "string", "description": "Task description"},
+                        "status"     : {"type": "string", "enum": ["pending", "in_progress", "completed"]},
+                        "activeForm" : {"type": "string", "description": "Present tense, e.g. 'Reading files'"},
                     },
-                    "required": ["content", "status", "activeForm"],
+                    "required"   : ["content", "status", "activeForm"],
                 },
-            }
+            },
         },
-        "required": ["items"],
+        "required"   : ["items"],
     },
 }
 
@@ -134,22 +141,34 @@ TASK_TOOL = {
 """
 
 
-# =============================================================================
-# TOOL IMPLEMENTATIONS
-# =============================================================================
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Tool Implementations
+#
 
-def safe_path(p: str) -> Path:
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Public API
+#
+def safe_path(p:str) -> Path:
+
     """
     Security: Ensure path stays within workspace.
     Prevents ../../../etc/passwd attacks.
     """
     path = (WORKDIR / p).resolve()
-    if not path.is_relative_to(WORKDIR):
-        raise ValueError(f"Path escapes workspace: {p}")
-    return path
+    if (not path.is_relative_to(WORKDIR)):
+
+        raise (ValueError(f"Path escapes workspace: {p}"))
+    #
+    return (path)
+#
 
 
-def run_bash(command: str) -> str:
+def run_bash(command:str) -> str:
+
     """
     Execute shell command with safety checks.
 
@@ -159,28 +178,39 @@ def run_bash(command: str) -> str:
     - Output truncated to 50KB
     """
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"]
-    if any(d in command for d in dangerous):
-        return "Error: Dangerous command blocked"
+    if (any(d in command for d in dangerous)):
+
+        return ("Error: Dangerous command blocked")
+    #
 
     try:
+
         result = subprocess.run(
             command,
-            shell=True,
-            cwd=WORKDIR,
-            capture_output=True,
-            text=True, errors="replace",
-            timeout=60
+            shell          = True,
+            cwd            = WORKDIR,
+            capture_output = True,
+            text           = True,
+            errors         = "replace",
+            timeout        = 60,
         )
         output = (result.stdout + result.stderr).strip()
-        return output[:50000] if output else "(no output)"
+        return ((output[:50000]) if (output) else ("(no output)"))
+    #
 
     except subprocess.TimeoutExpired:
-        return "Error: Command timed out (60s)"
+
+        return ("Error: Command timed out (60s)")
+    #
     except Exception as e:
-        return f"Error: {e}"
+
+        return (f"Error: {e}")
+    #
+#
 
 
-def run_read_file(path: str, limit: int = None) -> str:
+def run_read_file(path:str, limit:int=None) -> str:
+
     """
     Read file contents with optional line limit.
 
@@ -190,20 +220,28 @@ def run_read_file(path: str, limit: int = None) -> str:
     - Output truncated to 50KB
     """
     try:
-        text = safe_path(path).read_text(encoding="utf-8")
+
+        text  = safe_path(path).read_text(encoding="utf-8")
         lines = text.splitlines()
 
-        if limit and limit < len(lines):
+        if (limit  and  limit < len(lines)):
+
             lines = lines[:limit]
             lines.append(f"... ({len(text.splitlines()) - limit} more lines)")
+        #
 
-        return "\n".join(lines)[:50000]
+        return ("\n".join(lines)[:50000])
+    #
 
     except Exception as e:
-        return f"Error: {e}"
+
+        return (f"Error: {e}")
+    #
+#
 
 
-def run_write_file(path: str, content: str) -> str:
+def run_write_file(path:str, content:str) -> str:
+
     """
     Write content to file, creating parent directories if needed.
 
@@ -213,16 +251,22 @@ def run_write_file(path: str, content: str) -> str:
     - Returns byte count for confirmation
     """
     try:
+
         fp = safe_path(path)
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(content, encoding="utf-8")
-        return f"Wrote {len(content)} bytes to {path}"
+        return (f"Wrote {len(content)} bytes to {path}")
+    #
 
     except Exception as e:
-        return f"Error: {e}"
+
+        return (f"Error: {e}")
+    #
+#
 
 
-def run_edit_file(path: str, old_text: str, new_text: str) -> str:
+def run_edit_file(path:str, old_text:str, new_text:str) -> str:
+
     """
     Replace exact text in a file (surgical edit).
 
@@ -232,25 +276,35 @@ def run_edit_file(path: str, old_text: str, new_text: str) -> str:
     - Clear error if text not found
     """
     try:
-        fp = safe_path(path)
+
+        fp      = safe_path(path)
         content = fp.read_text(encoding="utf-8")
 
-        if old_text not in content:
-            return f"Error: Text not found in {path}"
+        if (old_text not in content):
+
+            return (f"Error: Text not found in {path}")
+        #
 
         new_content = content.replace(old_text, new_text, 1)
         fp.write_text(new_content, encoding="utf-8")
-        return f"Edited {path}"
+        return (f"Edited {path}")
+    #
 
     except Exception as e:
-        return f"Error: {e}"
+
+        return (f"Error: {e}")
+    #
+#
 
 
-# =============================================================================
-# DISPATCHER PATTERN
-# =============================================================================
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Dispatcher Pattern
+#
 
-def execute_tool(name: str, args: dict) -> str:
+def execute_tool(name:str, args:dict) -> str:
+
     """
     Dispatch tool call to implementation.
 
@@ -259,13 +313,22 @@ def execute_tool(name: str, args: dict) -> str:
     2. Add implementation function
     3. Add case to this dispatcher
     """
-    if name == "bash":
-        return run_bash(args["command"])
-    if name == "read_file":
-        return run_read_file(args["path"], args.get("limit"))
-    if name == "write_file":
-        return run_write_file(args["path"], args["content"])
-    if name == "edit_file":
-        return run_edit_file(args["path"], args["old_text"], args["new_text"])
+    if (name == "bash"):
+
+        return (run_bash(args["command"]))
+    #
+    if (name == "read_file"):
+
+        return (run_read_file(args["path"], args.get("limit")))
+    #
+    if (name == "write_file"):
+
+        return (run_write_file(args["path"], args["content"]))
+    #
+    if (name == "edit_file"):
+
+        return (run_edit_file(args["path"], args["old_text"], args["new_text"]))
+    #
     # Add more tools here...
-    return f"Unknown tool: {name}"
+    return (f"Unknown tool: {name}")
+#

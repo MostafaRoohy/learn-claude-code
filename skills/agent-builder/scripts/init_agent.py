@@ -12,13 +12,18 @@ Examples:
     python init_agent.py my-agent --path ./bots  # Custom output directory
 """
 
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Standard Modules
+#
 import argparse
 import sys
 from pathlib import Path
 
 # Agent templates for each level
 TEMPLATES = {
-    0: '''#!/usr/bin/env python3
+    0 : '''#!/usr/bin/env python3
 """
 Level 0 Agent - Bash is All You Need (~50 lines)
 
@@ -76,8 +81,7 @@ if __name__ == "__main__":
     while (q := input(">> ").strip()) not in ("q", "quit", ""):
         print(run(q, h), "\\n")
 ''',
-
-    1: '''#!/usr/bin/env python3
+    1 : '''#!/usr/bin/env python3
 """
 Level 1 Agent - Model as Agent (~200 lines)
 
@@ -217,14 +221,22 @@ MODEL_NAME=claude-sonnet-4-20250514
 '''
 
 
-def create_agent(name: str, level: int, output_dir: Path):
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Public API
+#
+def create_agent(name:str, level:int, output_dir:Path):
+
     """Create a new agent project."""
     # Validate level
-    if level not in TEMPLATES and level not in (2, 3, 4):
+    if (level not in TEMPLATES  and  level not in (2, 3, 4)):
+
         print(f"Error: Level {level} not yet implemented in scaffold.")
         print("Available levels: 0 (minimal), 1 (4 tools)")
         print("For levels 2-4, copy from mini-claude-code repository.")
         sys.exit(1)
+    #
 
     # Create output directory
     agent_dir = output_dir / name
@@ -232,7 +244,7 @@ def create_agent(name: str, level: int, output_dir: Path):
 
     # Write agent file
     agent_file = agent_dir / f"{name}.py"
-    template = TEMPLATES.get(level, TEMPLATES[1])
+    template   = TEMPLATES.get(level, TEMPLATES[1])
     agent_file.write_text(template.format(name=name), encoding="utf-8")
     print(f"Created: {agent_file}")
 
@@ -253,30 +265,44 @@ def create_agent(name: str, level: int, output_dir: Path):
     print(f"  3. Edit .env with your API key")
     print(f"  4. pip install anthropic python-dotenv")
     print(f"  5. python {name}.py")
+#
 
 
 def main():
+
     parser = argparse.ArgumentParser(
-        description="Scaffold a new AI coding agent project",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        description     = "Scaffold a new AI coding agent project",
+        formatter_class = argparse.RawDescriptionHelpFormatter,
+        epilog          = """
 Levels:
   0  Minimal (~50 lines) - Single bash tool, self-recursion for subagents
   1  Basic (~200 lines)  - 4 core tools: bash, read, write, edit
   2  Todo (~300 lines)   - + TodoWrite for structured planning
   3  Subagent (~450)     - + Task tool for context isolation
   4  Skills (~550)       - + Skill tool for domain expertise
-        """
+        """,
     )
     parser.add_argument("name", help="Name of the agent to create")
-    parser.add_argument("--level", type=int, default=1, choices=[0, 1, 2, 3, 4],
-                       help="Complexity level (default: 1)")
-    parser.add_argument("--path", type=Path, default=Path.cwd(),
-                       help="Output directory (default: current directory)")
+    parser.add_argument(
+        "--level",
+        type    = int,
+        default = 1,
+        choices = [0, 1, 2, 3, 4],
+        help    = "Complexity level (default: 1)",
+    )
+    parser.add_argument(
+        "--path",
+        type    = Path,
+        default = Path.cwd(),
+        help    = "Output directory (default: current directory)",
+    )
 
     args = parser.parse_args()
     create_agent(args.name, args.level, args.path)
+#
 
 
-if __name__ == "__main__":
+if (__name__ == "__main__"):
+
     main()
+#

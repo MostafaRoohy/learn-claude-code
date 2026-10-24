@@ -399,6 +399,19 @@ learn-claude-code/
 
 ---
 
+## Python Code Style
+
+All Python lessons, legacy agents, tests, and skill examples follow the visual
+formatting rules in [AGENTS.md](./AGENTS.md): hash section dividers, spaced block
+bodies, solitary `#` closing markers, parenthesized conditions and return values,
+compact typed signatures, and aligned assignment and configuration tables.
+Preserve this layout when editing; generic formatters such as Black would remove
+these deliberate conventions. Existing string contents, including prompts and
+embedded scaffold templates, are preserved.
+
+After changing lesson source, run `cd web && npm run extract` to refresh the web
+app's source copies and line metadata.
+
 ## What's Next
 
 After 17 lessons, you understand harness engineering from the inside out. Two paths to turn that knowledge into product:

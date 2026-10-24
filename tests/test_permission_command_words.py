@@ -1,3 +1,8 @@
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Standard Modules
+#
 import importlib.util
 import os
 import sys
@@ -7,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT               = Path(__file__).resolve().parents[1]
 PERMISSION_LESSONS = tuple(
     ROOT / chapter / "code.py"
     for chapter in (
@@ -28,64 +33,95 @@ PERMISSION_LESSONS = tuple(
 )
 
 
-def load_lesson(workdir: Path, lesson_path: Path):
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Public API
+#
+def load_lesson(workdir:Path, lesson_path:Path):
+
     fake_anthropic = types.ModuleType("anthropic")
-    fake_dotenv = types.ModuleType("dotenv")
+    fake_dotenv    = types.ModuleType("dotenv")
 
     class FakeAnthropic:
+
         def __init__(self, *args, **kwargs):
+
             self.messages = types.SimpleNamespace(create=None)
+        #
+    #
 
     fake_anthropic.Anthropic = FakeAnthropic
-    fake_dotenv.load_dotenv = lambda override=True: None
+    fake_dotenv.load_dotenv  = lambda override=True: None
 
     previous_modules = {
-        "anthropic": sys.modules.get("anthropic"),
-        "dotenv": sys.modules.get("dotenv"),
+        "anthropic" : sys.modules.get("anthropic"),
+        "dotenv"    : sys.modules.get("dotenv"),
     }
-    previous_cwd = Path.cwd()
-    previous_model = os.environ.get("MODEL_ID")
-    module_name = f"permission_words_{lesson_path.parent.name}_{time.time_ns()}"
-    spec = importlib.util.spec_from_file_location(module_name, lesson_path)
-    assert spec is not None and spec.loader is not None
+    previous_cwd     = Path.cwd()
+    previous_model   = os.environ.get("MODEL_ID")
+    module_name      = f"permission_words_{lesson_path.parent.name}_{time.time_ns()}"
+    spec             = importlib.util.spec_from_file_location(module_name, lesson_path)
+    assert spec is not None  and  spec.loader is not None
     module = importlib.util.module_from_spec(spec)
 
     sys.modules["anthropic"] = fake_anthropic
-    sys.modules["dotenv"] = fake_dotenv
+    sys.modules["dotenv"]    = fake_dotenv
     sys.modules[module_name] = module
     try:
+
         os.chdir(workdir)
         os.environ["MODEL_ID"] = "test-model"
         spec.loader.exec_module(module)
-        return module
+        return (module)
+    #
     finally:
+
         os.chdir(previous_cwd)
-        if previous_model is None:
+        if (previous_model is None):
+
             os.environ.pop("MODEL_ID", None)
+        #
         else:
+
             os.environ["MODEL_ID"] = previous_model
+        #
         for name, previous in previous_modules.items():
-            if previous is None:
+
+            if (previous is None):
+
                 sys.modules.pop(name, None)
+            #
             else:
+
                 sys.modules[name] = previous
+            #
+        #
         sys.modules.pop(module_name, None)
+    #
+#
 
 
 def permission_result(lesson, block):
-    if hasattr(lesson, "check_rules"):
-        return lesson.check_rules(block.name, block.input)
-    if hasattr(lesson, "permission_hook"):
-        return lesson.permission_hook(block)
 
-    goal = lesson.GoalController(evaluator=None)
+    if (hasattr(lesson, "check_rules")):
+
+        return (lesson.check_rules(block.name, block.input))
+    #
+    if (hasattr(lesson, "permission_hook")):
+
+        return (lesson.permission_hook(block))
+    #
+
+    goal    = lesson.GoalController(evaluator=None)
     session = lesson.AgentSession(
-        client=None,
-        model="test-model",
-        goal=goal,
-        workdir=Path.cwd(),
+        client  = None,
+        model   = "test-model",
+        goal    = goal,
+        workdir = Path.cwd(),
     )
-    return session._permission_hook(block)
+    return (session._permission_hook(block))
+#
 
 
 COMMAND_CASES = (
@@ -111,13 +147,8 @@ COMMAND_CASES = (
     "lesson_path", PERMISSION_LESSONS, ids=lambda path: path.parent.name
 )
 @pytest.mark.parametrize("command, expected", COMMAND_CASES)
-def test_permission_command_words_cover_position_case_and_boundaries(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    lesson_path: Path,
-    command: str,
-    expected: bool,
-) -> None:
+def test_permission_command_words_cover_position_case_and_boundaries(tmp_path:Path, monkeypatch:pytest.MonkeyPatch, lesson_path:Path, command:str, expected:bool) -> None:
+
     lesson = load_lesson(tmp_path, lesson_path)
     monkeypatch.setattr("builtins.input", lambda _prompt: "n")
     block = types.SimpleNamespace(name="bash", input={"command": command})
@@ -125,3 +156,4 @@ def test_permission_command_words_cover_position_case_and_boundaries(
     result = permission_result(lesson, block)
 
     assert bool(result) is expected
+#

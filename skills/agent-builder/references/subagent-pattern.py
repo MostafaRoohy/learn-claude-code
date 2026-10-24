@@ -5,15 +5,22 @@ The key insight: spawn child agents with ISOLATED context to prevent
 "context pollution" where exploration details fill up the main conversation.
 """
 
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Standard Modules
+#
 import time
 import sys
 
 # Assuming client, MODEL, execute_tool are defined elsewhere
 
 
-# =============================================================================
-# AGENT TYPE REGISTRY
-# =============================================================================
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Agent Type Registry
+#
 
 AGENT_TYPES = {
     # Explore: Read-only, for searching and analyzing
@@ -46,15 +53,23 @@ AGENT_TYPES = {
 }
 
 
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Public API
+#
 def get_agent_descriptions() -> str:
+
     """Generate descriptions for Task tool schema."""
-    return "\n".join(
+    return ("\n".join(
         f"- {name}: {cfg['description']}"
         for name, cfg in AGENT_TYPES.items()
-    )
+    ))
+#
 
 
-def get_tools_for_agent(agent_type: str, base_tools: list) -> list:
+def get_tools_for_agent(agent_type:str, base_tools:list) -> list:
+
     """
     Filter tools based on agent type.
 
@@ -65,19 +80,24 @@ def get_tools_for_agent(agent_type: str, base_tools: list) -> list:
     """
     allowed = AGENT_TYPES.get(agent_type, {}).get("tools", "*")
 
-    if allowed == "*":
-        return base_tools  # All base tools, but NOT Task
+    if (allowed == "*"):
 
-    return [t for t in base_tools if t["name"] in allowed]
+        return (base_tools)  # All base tools, but NOT Task
+    #
+
+    return ([t for t in base_tools if t["name"] in allowed])
+#
 
 
-# =============================================================================
-# TASK TOOL DEFINITION
-# =============================================================================
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Task Tool Definition
+#
 
 TASK_TOOL = {
-    "name": "Task",
-    "description": f"""Spawn a subagent for a focused subtask.
+    "name"         : "Task",
+    "description"  : f"""Spawn a subagent for a focused subtask.
 
 Subagents run in ISOLATED context - they don't see parent's history.
 Use this to keep the main conversation clean.
@@ -90,34 +110,36 @@ Example uses:
 - Task(plan): "Design a migration strategy for the database"
 - Task(code): "Implement the user registration form"
 """,
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "description": {
-                "type": "string",
-                "description": "Short task name (3-5 words) for progress display"
+    "input_schema" : {
+        "type"       : "object",
+        "properties" : {
+            "description" : {
+                "type"        : "string",
+                "description" : "Short task name (3-5 words) for progress display",
             },
-            "prompt": {
-                "type": "string",
-                "description": "Detailed instructions for the subagent"
+            "prompt"      : {
+                "type"        : "string",
+                "description" : "Detailed instructions for the subagent",
             },
-            "agent_type": {
-                "type": "string",
-                "enum": list(AGENT_TYPES.keys()),
-                "description": "Type of agent to spawn"
+            "agent_type"  : {
+                "type"        : "string",
+                "enum"        : list(AGENT_TYPES.keys()),
+                "description" : "Type of agent to spawn",
             },
         },
-        "required": ["description", "prompt", "agent_type"],
+        "required"   : ["description", "prompt", "agent_type"],
     },
 }
 
 
-# =============================================================================
-# SUBAGENT EXECUTION
-# =============================================================================
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Subagent Execution
+#
 
-def run_task(description: str, prompt: str, agent_type: str,
-             client, model: str, workdir, base_tools: list, execute_tool) -> str:
+def run_task(description:str, prompt:str, agent_type:str, client, model:str, workdir, base_tools:list, execute_tool) -> str:
+
     """
     Execute a subagent task with isolated context.
 
@@ -140,8 +162,10 @@ def run_task(description: str, prompt: str, agent_type: str,
     Returns:
         Final text output from subagent
     """
-    if agent_type not in AGENT_TYPES:
-        return f"Error: Unknown agent type '{agent_type}'"
+    if (agent_type not in AGENT_TYPES):
+
+        return (f"Error: Unknown agent type '{agent_type}'")
+    #
 
     config = AGENT_TYPES[agent_type]
 
@@ -161,34 +185,38 @@ Complete the task and return a clear, concise summary."""
 
     # Progress display
     print(f"  [{agent_type}] {description}")
-    start = time.time()
+    start      = time.time()
     tool_count = 0
 
     # Run the same agent loop (but silently)
-    while True:
+    while (True):
+
         response = client.messages.create(
-            model=model,
-            system=sub_system,
-            messages=sub_messages,
-            tools=sub_tools,
-            max_tokens=8000,
+            model      = model,
+            system     = sub_system,
+            messages   = sub_messages,
+            tools      = sub_tools,
+            max_tokens = 8000,
         )
 
         # Check if done
-        if response.stop_reason != "tool_use":
+        if (response.stop_reason != "tool_use"):
+
             break
+        #
 
         # Execute tools
         tool_calls = [b for b in response.content if b.type == "tool_use"]
-        results = []
+        results    = []
 
         for tc in tool_calls:
+
             tool_count += 1
             output = execute_tool(tc.name, tc.input)
             results.append({
-                "type": "tool_result",
-                "tool_use_id": tc.id,
-                "content": output
+                "type"        : "tool_result",
+                "tool_use_id" : tc.id,
+                "content"     : output,
             })
 
             # Update progress (in-place on same line)
@@ -197,9 +225,11 @@ Complete the task and return a clear, concise summary."""
                 f"\r  [{agent_type}] {description} ... {tool_count} tools, {elapsed:.1f}s"
             )
             sys.stdout.flush()
+        #
 
         sub_messages.append({"role": "assistant", "content": response.content})
         sub_messages.append({"role": "user", "content": results})
+    #
 
     # Final progress update
     elapsed = time.time() - start
@@ -210,15 +240,22 @@ Complete the task and return a clear, concise summary."""
     # Extract and return ONLY the final text
     # This is what the parent agent sees - a clean summary
     for block in response.content:
-        if hasattr(block, "text"):
-            return block.text
 
-    return "(subagent returned no text)"
+        if (hasattr(block, "text")):
+
+            return (block.text)
+        #
+    #
+
+    return ("(subagent returned no text)")
+#
 
 
-# =============================================================================
-# USAGE EXAMPLE
-# =============================================================================
+#
+###################################################################################################
+###################################################################################################
+################################################################################################### Usage Example
+#
 
 """
 # In your main agent's execute_tool function:
