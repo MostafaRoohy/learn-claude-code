@@ -332,10 +332,13 @@ s08_context_compact/
   README.zh.md           # Chinese translation
   README.ja.md           # Japanese translation
   code.py                # standalone runnable implementation
+  code.ipynb             # interactive OpenAI-compatible adaptation
   images/                # SVG diagrams (where needed)
 ```
 
 Read the `README.md` for the core idea and work through the code. Complex chapters have `<details>` folds for deep dives -- open them when you want to go deeper. Simple chapters have 0-1 diagrams, complex chapters have more.
+
+The `code.py` lessons use the Anthropic SDK as written. Their `code.ipynb` counterparts instantiate `NotebookOpenAI` (a subclass of the OpenAI SDK client), configured from the root `.env` through `OPENCODE_API_KEY`, `OPENCODE_MODEL`, and `OPENCODE_BASE_URL` (with `ANTHROPIC_*`/`MODEL_ID` fallbacks). The notebooks retain a message-block adapter so the original agent-loop code still works; only s15/s16 register an `anthropic` import alias for unchanged Python modules loaded dynamically. Install `openai`, `python-dotenv`, and `pyyaml` in the notebook kernel.
 
 Read from s01 through s17 in order. Some mechanisms build directly on the previous runtime; independent mechanism chapters state which earlier kernel they use.
 

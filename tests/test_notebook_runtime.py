@@ -106,7 +106,6 @@ def test_notebook_openai_bridge_round_trip(path:Path, monkeypatch:pytest.MonkeyP
     fake_openai = types.ModuleType('openai')
     fake_openai.OpenAI = FakeOpenAI
     monkeypatch.setitem(sys.modules, 'openai', fake_openai)
-    monkeypatch.setitem(sys.modules, 'anthropic', types.ModuleType('anthropic'))
 
     notebook = json.loads(path.read_text(encoding='utf-8'))
     bridge   = ''.join(notebook['cells'][1]['source'])
@@ -118,13 +117,15 @@ def test_notebook_openai_bridge_round_trip(path:Path, monkeypatch:pytest.MonkeyP
 
     exec(compile(bridge, str(path), 'exec'), context)
 
-    if (path.parent.name == 's02_tool_use'):
+    content = ''.join(''.join(cell['source']) for cell in notebook['cells'])
+    assert ('from anthropic import Anthropic' not in content)
+    assert ('Anthropic(' not in content)
+    assert (('_legacy_import.Anthropic' in content) == (
+        path.parent.name in {'s15_integrated_harness', 's16_workflow_runtime'}
+    ))
 
-        imports = ''.join(''.join(cell['source']) for cell in notebook['cells'])
-        assert ('from anthropic import Anthropic' in imports)
-    #
-
-    client = context['_NotebookAnthropic']()
+    client = context['NotebookOpenAI']()
+    assert (isinstance(client, FakeOpenAI))
     first  = client.messages.create(
         model    = 'test',
         system   = 'system',
